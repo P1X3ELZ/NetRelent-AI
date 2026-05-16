@@ -50,11 +50,11 @@
             font-size: 16px;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            animation: fadeIn 0.2s ease-out;
+            animation: slideIn 0.2s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -74,7 +74,6 @@
             border-bottom-left-radius: 4px;
         }
 
-        /* Native Form Wrapper to fix click/enter actions instantly */
         form {
             width: 100%;
             max-width: 750px;
@@ -163,8 +162,8 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        chatForm.addEventListener('submit', async function(e) {
-            e.preventDefault(); // Lock browser from standard refresh
+        chatForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
             
             const text = userInput.value.trim();
             if (!text) return;
@@ -180,14 +179,14 @@
                 });
                 
                 if (!response.ok) {
-                    appendMessage(`Network Error: Server returned code ${response.status}`, 'ai-msg');
+                    appendMessage(`Response Error: Code ${response.status}`, 'ai-msg');
                     return;
                 }
                 
                 const data = await response.json();
                 appendMessage(data.answer, 'ai-msg');
             } catch (error) {
-                appendMessage("Uplink Interrupted: Cannot connect to Render framework.", 'ai-msg');
+                appendMessage("Uplink Interrupted: Failed to connect to Render host.", 'ai-msg');
             }
         });
     </script>
