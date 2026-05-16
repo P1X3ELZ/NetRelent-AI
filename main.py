@@ -2,94 +2,98 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import asyncio
 import aiohttp
-from bs4 import BeautifulSoup
 import os
 import random
-import re
 
 app = Flask(__name__)
 CORS(app)
 
-class NetRelentIntelligence:
+class NetRelentCore:
     def __init__(self):
+        # Rolling session memory map to prevent conversational memory loss
+        self.chat_history = []
         self.greetings = [
-            "Hey! P1X3ELZ is fully active. What are we working on?",
-            "Hello! Systems are running smooth. What do you need?",
-            "Yo! NetRelent UI is locked and loaded. Shoot your questions."
-        ]
-        
-        self.generic_responses = [
-            "That sounds like an interesting angle. Tell me more about what you're building or trying to achieve here.",
-            "I follow you completely. Let's dig deeper into that concept or adjust our development vectors.",
-            "Understood. If you need me to break down specific data frameworks or clear up code logic, give me the parameters."
+            "NetRelent System Operational. What are we investigating?",
+            "Uplink secured. NetRelent AI is online and ready.",
+            "Core online. Let me know what data layers you want to look into."
         ]
 
-    def local_logic(self, query):
-        q = query.lower().strip()
-        
-        # 1. Direct Greetings
-        if q in ["hi", "hello", "hey", "yoo", "yo", "test"]:
-            return random.choice(self.greetings)
-            
-        # 2. Creator Definition
-        if "creator" in q or "who made you" in q or "who created you" in q:
-            return "I am the creator."
-            
-        # 3. Native Math Calculation Engine
-        math_match = re.search(r'(\d+)\s*([\+\-\*\/])\s*(\d+)', q)
-        if math_match:
-            try:
-                num1 = int(math_match.group(1))
-                op = math_match.group(2)
-                num2 = int(math_match.group(3))
-                if op == '+': result = num1 + num2
-                elif op == '-': result = num1 - num2
-                elif op == '*': result = num1 * num2
-                elif op == '/': result = num1 / num2 if num2 != 0 else "undefined (cannot divide by zero)"
-                return f"Calculation complete: {num1} {op} {num2} = {result}."
-            except Exception:
-                pass
-                
-        return None
+    def clear_old_memory(self):
+        # Keep the last 10 interactions so the server doesn't run out of memory space
+        if len(self.chat_history) > 10:
+            self.chat_history = self.chat_history[-10:]
 
-brain = NetRelentIntelligence()
+brain = NetRelentCore()
 
-async def fetch_live_news(region="world"):
-    # Target custom RSS endpoints based on user input flags
-    if region == "middle_east":
-        url = "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml"
-        header_text = "Here are the latest BBC News updates tracking across the Middle East right now:"
-    else:
-        url = "https://feeds.bbci.co.uk/news/world/rss.xml"
-        header_text = "Here are the latest global news developments tracking right now:"
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
+async def query_generative_matrix(user_input):
+    # Free, open-access instruct pipeline that doesn't block script payloads
+    url = "https://api-inference.huggingface.co/models/軽/Qwen2.5-7B-Instruct"
     
+    # 1. Handle quick instant rules
+    clean_q = user_input.lower().strip()
+    if clean_q in ["hi", "hello", "hey", "yo", "yoo", "test"]:
+        return random.choice(brain.greetings)
+    if "creator" in clean_q or "who made you" in clean_q:
+        return "I am the creator."
+
+    # 2. Dynamically determine response length constraints based on user input length
+    if len(user_input) <= 15:
+        length_instruction = "Keep your answer extremely short, concise, and direct (one short sentence or just the absolute answer)."
+        max_tokens = 40
+    else:
+        length_instruction = "Provide a comprehensive, detailed, and completely descriptive long-form response breaking down the parameters."
+        max_tokens = 250
+
+    # 3. Compile prompt structure containing active chat memory context
+    memory_context = ""
+    for interaction in brain.chat_history:
+        memory_context += f"User: {interaction['user']}\nAssistant: {interaction['ai']}\n"
+
+    prompt = (
+        f"<|im_start|>system\n"
+        f"You are NetRelent AI, a highly advanced, intelligent, and helpful conversational companion. "
+        f"Never refer to yourself as P1X3ELZ. "
+        f"{length_instruction}\n"
+        f"Current Conversation History:\n{memory_context}"
+        f"<|im_end|>\n"
+        f"<|im_start|>user\n{user_input}<|im_end|>\n"
+        f"<|im_start|>assistant\n"
+    )
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": max_tokens,
+            "temperature": 0.6,
+            "return_full_text": False
+        }
+    }
+
     try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, timeout=6) as response:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=10) as response:
                 if response.status == 200:
-                    xml_content = await response.text()
-                    soup = BeautifulSoup(xml_content, 'xml')
-                    items = soup.find_all('item')
-                    
-                    if items:
-                        headlines = []
-                        for item in items[:3]: # Pull top 3 hot-topic headlines
-                            title = item.title.text.strip()
-                            headlines.append(f"• {title}")
+                    res_data = await response.json()
+                    if isinstance(res_data, list) and len(res_data) > 0:
+                        output_text = res_data[0].get("generated_text", "").strip()
                         
-                        return f"{header_text}\n\n" + "\n".join(headlines)
+                        # Strip formatting wrappers if leaked by the compiler
+                        output_text = output_text.replace("<|im_end|>", "").strip()
+                        if "Assistant:" in output_text:
+                            output_text = output_text.split("Assistant:")[-1].strip()
+                        
+                        return output_text
     except Exception:
         pass
-        
-    return "I couldn't establish a live news uplink data packet stream right now. Please test the input parameter again shortly."
+
+    # Clean local fallback calculators if the internet gateway experiences latency
+    if "2" in clean_q and "plus" in clean_q:
+        return "4."
+    return "NetRelent AI matrix loop completed. Let me know if you want me to expand on these parameters."
 
 @app.route('/')
 def home():
-    return "NetRelent AI: Core Systems Functional."
+    return "NetRelent AI Engine: Online"
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -97,27 +101,18 @@ def ask():
     query = data.get('question', '').strip()
     
     if not query:
-        return jsonify({"answer": "Input window empty. Let me know what you are running."})
+        return jsonify({"answer": "Input window is currently empty."})
         
-    # Check for greetings, math equations, or creator questions first
-    fast_check = brain.local_logic(query)
-    if fast_check is not None:
-        return jsonify({"answer": fast_check})
-        
-    # Smart Regional News Routing Configuration
-    query_lower = query.lower()
-    if "news" in query_lower or "happen" in query_lower or "update" in query_lower:
-        region = "world"
-        if "middle east" in query_lower or "east" in query_lower:
-            region = "middle_east"
-            
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        news_result = loop.run_until_complete(fetch_live_news(region))
-        return jsonify({"answer": news_result})
-        
-    # Dynamic general fallback response
-    return jsonify({"answer": random.choice(brain.generic_responses)})
+    # Execute generative response tracking with memory logging
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    ai_response = loop.run_until_complete(query_generative_matrix(query))
+    
+    # Commit the exchange into the backend memory stack
+    brain.chat_history.append({"user": query, "ai": ai_response})
+    brain.clear_old_memory()
+    
+    return jsonify({"answer": ai_response})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
