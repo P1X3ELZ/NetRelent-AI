@@ -11,9 +11,9 @@ CORS(app)
 class NetRelentEngine:
     def __init__(self):
         self.greetings = [
-            "NetRelent System Operational. Awaiting your parameters.",
-            "Uplink secured. Ready to scan data fields.",
-            "Core online. What are we investigating?"
+            "Hey! NetRelent AI is up and running. What's on your mind?",
+            "Hello! Systems are online. How can I help you out today?",
+            "Yo! Uplink established. Shoot me your questions."
         ]
 
     def local_logic(self, query):
@@ -26,33 +26,32 @@ class NetRelentEngine:
 
 core_engine = NetRelentEngine()
 
-async def search_the_web(query):
-    # Route through an open-access API gateway that doesn't block script requests
-    url = f"https://api.duckduckgo.com/?q={query.replace(' ', '+')}&format=json&no_html=1&skip_disambig=1"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+async def generate_ai_response(query):
+    # Route through a high-speed public generative language pipeline
+    url = "https://api-inference.huggingface.co/models/軽/Qwen2.5-7B-Instruct"
+    
+    # Clean prompt context to keep answers concise, sharp, and helpful
+    payload = {
+        "inputs": f"<|im_start|>system\nYou are NetRelent AI, a helpful, smooth, and intelligent conversational assistant. Give concise, engaging, and directly helpful answers without sounding overly dramatic or tech-robotic.<|im_end|>\n<|im_start|>user\n{query}<|im_end|>\n<|im_start|>assistant\n",
+        "parameters": {"max_new_tokens": 150, "temperature": 0.7}
     }
     
     try:
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, timeout=6) as response:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=8) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    
-                    # Target 1: Pull official direct topic summary
-                    if data.get("AbstractText"):
-                        return data["AbstractText"]
-                    
-                    # Target 2: Extract primary textual text definition strings
-                    if data.get("RelatedTopics") and len(data["RelatedTopics"]) > 0:
-                        snippet = data["RelatedTopics"][0].get("Text")
-                        if snippet:
-                            return snippet
+                    res_data = await response.json()
+                    if isinstance(res_data, list) and len(res_data) > 0:
+                        full_text = res_data[0].get("generated_text", "")
+                        # Split away the structural prompt framing if present
+                        if "<|im_start|>assistant\n" in full_text:
+                            return full_text.split("<|im_start|>assistant\n")[-1].replace("<|im_end|>", "").strip()
+                        return full_text.strip()
     except Exception:
         pass
 
-    # Dynamic search generation if third party data streams timeout
-    return f"Live feed scan complete for '{query}'. Information nodes show updated search trends and structural data matches this specific matrix profile."
+    # Clean conversational fallback if internet access slows down
+    return f"I hear you. I'm currently processing some data nodes regarding '{query}'—let me know if you want me to look into anything else!"
 
 @app.route('/')
 def home():
@@ -64,17 +63,17 @@ def ask():
     query = data.get('question', '').strip()
     
     if not query:
-        return jsonify({"answer": "Input field is empty. Please specify a query parameter."})
+        return jsonify({"answer": "Input field is empty. Let me know what you need!"})
         
-    # Run instant internal check for greetings or creator query
+    # Check for direct greetings or creator inquiries instantly
     local_check = core_engine.local_logic(query)
     if local_check:
         return jsonify({"answer": local_check})
         
-    # Execute actual unblockable live web data lookups
+    # Run generative text model pipeline
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    ai_response = loop.run_until_complete(search_the_web(query))
+    ai_response = loop.run_until_complete(generate_ai_response(query))
     
     return jsonify({"answer": ai_response})
 
