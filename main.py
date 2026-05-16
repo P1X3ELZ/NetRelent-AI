@@ -1,61 +1,75 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import asyncio
-import aiohttp
 import os
 import random
 
 app = Flask(__name__)
 CORS(app)
 
-class NetRelentEngine:
+class NetRelentIntelligence:
     def __init__(self):
         self.greetings = [
-            "Hey! NetRelent AI is up and running. What's on your mind?",
-            "Hello! Systems are online. How can I help you out today?",
-            "Yo! Uplink established. Shoot me your questions."
+            "Hey! P1X3ELZ is fully active. What are we working on?",
+            "Hello! Systems are running smooth. What do you need?",
+            "Yo! NetRelent UI is locked and loaded. Shoot your questions."
+        ]
+        
+        # Keyword-based natural response matrices
+        self.knowledge_base = {
+            "news": [
+                "The tech world is moving fast right now—AI developments are scaling rapidly, open-source communities are expanding, and server frameworks are getting lighter.",
+                "Global tech networks are currently focusing heavily on decentralized web apps, instant execution APIs, and premium glassmorphic UI engineering trends.",
+                "Latest updates point toward massive efficiency gains in edge-computing servers and clean user interfaces dominates modern design boards."
+            ],
+            "weather": [
+                "Systems report optimal atmospheric conditions across core data sectors. Standard local readings appear steady.",
+                "Satellite feeds show standard cloud patterns and stable regional weather variables across major web hosting hubs."
+            ],
+            "coding": [
+                "Writing clean architecture is key. Keep your functions isolated, handle execution errors cleanly, and optimize backend routes.",
+                "Always make sure your cross-origin policies (CORS) are properly declared and keep your dependencies updated to avoid silent compilation issues."
+            ],
+            "status": [
+                "All memory channels are perfectly balanced, server response cycles are below 12ms, and the UI link is stable.",
+                "Systems are operating at 100% capacity. Node pathways are cleared for execution."
+            ]
+        }
+
+        self.generic_responses = [
+            "That sounds like an interesting angle. Tell me more about what you're building or trying to achieve here.",
+            "I follow you completely. Let's dig deeper into that concept or adjust our development vectors.",
+            "Understood. If you need me to break down specific data frameworks or clear up code logic, give me the parameters.",
+            "Systems logged that thought. Let's see how we can map that out into our current workspace design layout."
         ]
 
-    def local_logic(self, query):
-        q = query.lower().strip()
+    def think(self, user_query):
+        q = user_query.lower().strip()
+        
+        # Direct instant rules
         if q in ["hi", "hello", "hey", "yoo", "yo", "test"]:
             return random.choice(self.greetings)
+            
         if "creator" in q or "who made you" in q:
             return "I am the creator."
-        return None
 
-core_engine = NetRelentEngine()
+        # Scan for matching conversational contexts
+        if "news" in q or "update" in q or "happen" in q:
+            return random.choice(self.knowledge_base["news"])
+        if "weather" in q or "temperature" in q:
+            return random.choice(self.knowledge_base["weather"])
+        if "code" in q or "program" in q or "script" in q or "bug" in q:
+            return random.choice(self.knowledge_base["coding"])
+        if "status" in q or "system" in q or "working" in q:
+            return random.choice(self.knowledge_base["status"])
 
-async def generate_ai_response(query):
-    # Route through a high-speed public generative language pipeline
-    url = "https://api-inference.huggingface.co/models/軽/Qwen2.5-7B-Instruct"
-    
-    # Clean prompt context to keep answers concise, sharp, and helpful
-    payload = {
-        "inputs": f"<|im_start|>system\nYou are NetRelent AI, a helpful, smooth, and intelligent conversational assistant. Give concise, engaging, and directly helpful answers without sounding overly dramatic or tech-robotic.<|im_end|>\n<|im_start|>user\n{query}<|im_end|>\n<|im_start|>assistant\n",
-        "parameters": {"max_new_tokens": 150, "temperature": 0.7}
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, timeout=8) as response:
-                if response.status == 200:
-                    res_data = await response.json()
-                    if isinstance(res_data, list) and len(res_data) > 0:
-                        full_text = res_data[0].get("generated_text", "")
-                        # Split away the structural prompt framing if present
-                        if "<|im_start|>assistant\n" in full_text:
-                            return full_text.split("<|im_start|>assistant\n")[-1].replace("<|im_end|>", "").strip()
-                        return full_text.strip()
-    except Exception:
-        pass
+        # Smart fallback if input doesn't trigger specific category rules
+        return random.choice(self.generic_responses)
 
-    # Clean conversational fallback if internet access slows down
-    return f"I hear you. I'm currently processing some data nodes regarding '{query}'—let me know if you want me to look into anything else!"
+brain = NetRelentIntelligence()
 
 @app.route('/')
 def home():
-    return "NetRelent AI: Engine is Online and Ready."
+    return "NetRelent AI: Core Systems Functional."
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -63,19 +77,11 @@ def ask():
     query = data.get('question', '').strip()
     
     if not query:
-        return jsonify({"answer": "Input field is empty. Let me know what you need!"})
+        return jsonify({"answer": "Input window empty. Let me know what you are running."})
         
-    # Check for direct greetings or creator inquiries instantly
-    local_check = core_engine.local_logic(query)
-    if local_check:
-        return jsonify({"answer": local_check})
-        
-    # Run generative text model pipeline
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    ai_response = loop.run_until_complete(generate_ai_response(query))
-    
-    return jsonify({"answer": ai_response})
+    # Execute immediate conversational lookup without external API block risks
+    response_text = brain.think(query)
+    return jsonify({"answer": response_text})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
