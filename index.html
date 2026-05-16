@@ -2,46 +2,169 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NetRelent AI | Predator Terminal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetRelent AI</title>
     <style>
-        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .terminal { width: 80%; max-width: 800px; background: #000; border: 1px solid #00ff41; padding: 20px; box-shadow: 0 0 20px #00ff4133; }
-        h1 { font-size: 1.2rem; border-bottom: 1px solid #00ff41; padding-bottom: 10px; margin-top: 0; }
-        input { background: transparent; border: none; border-bottom: 1px solid #00ff41; color: #00ff41; width: 100%; font-family: inherit; font-size: 1rem; outline: none; margin: 20px 0; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-        #output { margin-top: 20px; color: #008f11; height: 200px; overflow-y: auto; border: 1px solid #333; padding: 10px; font-size: 0.9rem; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: #0a000f;
+            background-image: radial-gradient(circle at center, #1a0033 0%, #0a000f 100%);
+            color: #e0b0ff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Top Header - No version numbers, perfectly clean */
+        header {
+            margin-top: 40px;
+            letter-spacing: 8px;
+            font-size: 24px;
+            font-weight: 300;
+            color: #bc13fe;
+            text-shadow: 0 0 15px #bc13fe;
+            text-transform: uppercase;
+        }
+
+        /* Chat Display Area */
+        #chat-container {
+            flex: 1;
+            width: 100%;
+            max-width: 900px;
+            padding: 40px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scrollbar-width: none;
+        }
+        #chat-container::-webkit-scrollbar { display: none; }
+
+        .message {
+            max-width: 80%;
+            padding: 14px 22px;
+            border-radius: 20px;
+            line-height: 1.6;
+            font-size: 16px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-msg {
+            align-self: flex-end;
+            background: rgba(188, 19, 254, 0.12);
+            border: 1px solid rgba(188, 19, 254, 0.35);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-msg {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #d8c5e3;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Glassy Bottom Input Bar */
+        .input-wrapper {
+            width: 100%;
+            max-width: 750px;
+            margin-bottom: 40px;
+            position: relative;
+            padding: 0 20px;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 50px;
+            padding: 10px 12px 10px 30px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .input-container:focus-within {
+            border-color: rgba(188, 19, 254, 0.5);
+            box-shadow: 0 0 25px rgba(188, 19, 254, 0.25);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            padding: 10px 0;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Send Button */
+        .send-btn {
+            background: #bc13fe;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 15px #bc13fe;
+            transition: all 0.2s ease;
+        }
+
+        .send-btn:hover { 
+            transform: scale(1.08); 
+            box-shadow: 0 0 22px #bc13fe;
+        }
+        .send-btn active { transform: scale(0.95); }
+        .send-btn svg { fill: white; width: 18px; height: 18px; }
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <h1>PREDATOR ENGINE v1.0 // UPLINK: ONLINE</h1>
-        <div id="output">SYSTEM STATUS: IDLE... AWAITING COORDINATES</div>
-        <input type="text" id="query" placeholder="TYPE QUESTION AND PRESS EXECUTE..." onkeypress="if(event.key === 'Enter') sendQuery()">
-        <button onclick="sendQuery()">EXECUTE</button>
+
+    <header>NetRelent AI</header>
+
+    <div id="chat-container"></div>
+
+    <div class="input-wrapper">
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Initiate..." autocomplete="off" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+            </button>
+        </div>
     </div>
 
     <script>
-        async function sendQuery() {
-            const query = document.getElementById('query').value;
-            const output = document.getElementById('output');
-            if(!query) return;
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
 
-            output.innerHTML += `<br>> INITIALIZING SEARCH: ${query}...`;
-            
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, 'user-msg');
+            userInput.value = '';
+
             try {
-                const response = await fetch('https://netrelent-ai.onrender.com/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: query })
-                });
-                const data = await response.json();
-                output.innerHTML += `<br>> RESPONSE: ${data.answer}`;
-            } catch (err) {
-                output.innerHTML += `<br>> ERROR: CONNECTION TIMEOUT`;
-            }
-            document.getElementById('query').value = '';
-            output.scrollTop = output.scrollHeight;
-        }
-    </script>
-</body>
-</html>
+                const
