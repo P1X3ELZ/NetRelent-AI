@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import asyncio
+import aiohttp
+from bs4 import BeautifulSoup
 import os
 import random
 
@@ -14,58 +17,48 @@ class NetRelentIntelligence:
             "Yo! NetRelent UI is locked and loaded. Shoot your questions."
         ]
         
-        # Keyword-based natural response matrices
-        self.knowledge_base = {
-            "news": [
-                "The tech world is moving fast right now—AI developments are scaling rapidly, open-source communities are expanding, and server frameworks are getting lighter.",
-                "Global tech networks are currently focusing heavily on decentralized web apps, instant execution APIs, and premium glassmorphic UI engineering trends.",
-                "Latest updates point toward massive efficiency gains in edge-computing servers and clean user interfaces dominates modern design boards."
-            ],
-            "weather": [
-                "Systems report optimal atmospheric conditions across core data sectors. Standard local readings appear steady.",
-                "Satellite feeds show standard cloud patterns and stable regional weather variables across major web hosting hubs."
-            ],
-            "coding": [
-                "Writing clean architecture is key. Keep your functions isolated, handle execution errors cleanly, and optimize backend routes.",
-                "Always make sure your cross-origin policies (CORS) are properly declared and keep your dependencies updated to avoid silent compilation issues."
-            ],
-            "status": [
-                "All memory channels are perfectly balanced, server response cycles are below 12ms, and the UI link is stable.",
-                "Systems are operating at 100% capacity. Node pathways are cleared for execution."
-            ]
-        }
-
         self.generic_responses = [
             "That sounds like an interesting angle. Tell me more about what you're building or trying to achieve here.",
             "I follow you completely. Let's dig deeper into that concept or adjust our development vectors.",
-            "Understood. If you need me to break down specific data frameworks or clear up code logic, give me the parameters.",
-            "Systems logged that thought. Let's see how we can map that out into our current workspace design layout."
+            "Understood. If you need me to break down specific data frameworks or clear up code logic, give me the parameters."
         ]
 
-    def think(self, user_query):
-        q = user_query.lower().strip()
-        
-        # Direct instant rules
+    def local_logic(self, query):
+        q = query.lower().strip()
         if q in ["hi", "hello", "hey", "yoo", "yo", "test"]:
             return random.choice(self.greetings)
-            
         if "creator" in q or "who made you" in q:
             return "I am the creator."
-
-        # Scan for matching conversational contexts
-        if "news" in q or "update" in q or "happen" in q:
-            return random.choice(self.knowledge_base["news"])
-        if "weather" in q or "temperature" in q:
-            return random.choice(self.knowledge_base["weather"])
-        if "code" in q or "program" in q or "script" in q or "bug" in q:
-            return random.choice(self.knowledge_base["coding"])
-        if "status" in q or "system" in q or "working" in q:
-            return random.choice(self.knowledge_base["status"])
-
-        # Smart fallback if input doesn't trigger specific category rules
-        return random.choice(self.generic_responses)
+        return None
 
 brain = NetRelentIntelligence()
+
+async def fetch_live_news():
+    # Utilizing an open RSS endpoint that doesn't block server script queries
+    url = "https://feeds.bbci.co.uk/news/world/rss.xml"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    
+    try:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url, timeout=5) as response:
+                if response.status == 200:
+                    xml_content = await response.text()
+                    soup = BeautifulSoup(xml_content, 'xml')
+                    items = soup.find_all('item')
+                    
+                    if items:
+                        headlines = []
+                        for item in items[:3]: # Pull top 3 trending global headlines
+                            title = item.title.text.strip()
+                            headlines.append(f"• {title}")
+                        
+                        return "Here are the latest global news developments tracking right now:\n\n" + "\n".join(headlines)
+    except Exception as e:
+        print(f"News fetch exception: {str(e)}")
+        
+    return "I couldn't establish a live news link right now, but global tech indices show heavy momentum in decentralized systems and modern UI architecture updates."
 
 @app.route('/')
 def home():
@@ -79,9 +72,21 @@ def ask():
     if not query:
         return jsonify({"answer": "Input window empty. Let me know what you are running."})
         
-    # Execute immediate conversational lookup without external API block risks
-    response_text = brain.think(query)
-    return jsonify({"answer": response_text})
+    # 1. Quick greetings/creator routing check
+    fast_check = brain.local_logic(query)
+    if fast_check:
+        return jsonify({"answer": fast_check})
+        
+    # 2. Live Automated News Lookup Engine Route
+    query_lower = query.lower()
+    if "news" in query_lower or "happen" in query_lower or "update" in query_lower:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        news_result = loop.run_until_complete(fetch_live_news())
+        return jsonify({"answer": news_result})
+        
+    # 3. Dynamic generic fallback conversational response
+    return jsonify({"answer": random.choice(brain.generic_responses)})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
