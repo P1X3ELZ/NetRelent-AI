@@ -74,11 +74,11 @@
             border-bottom-left-radius: 4px;
         }
 
-        .input-wrapper {
+        /* Native Form Wrapper to fix click/enter actions instantly */
+        form {
             width: 100%;
             max-width: 750px;
             margin-bottom: 40px;
-            position: relative;
             padding: 0 20px;
         }
 
@@ -141,25 +141,34 @@
 
     <div id="chat-container"></div>
 
-    <div class="input-wrapper">
+    <form id="chat-form">
         <div class="input-container">
-            <input type="text" id="user-input" placeholder="Initiate..." autocomplete="off">
-            <button class="send-btn" id="send-btn">
+            <input type="text" id="user-input" placeholder="Initiate..." autocomplete="off" required>
+            <button type="submit" class="send-btn">
                 <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
             </button>
         </div>
-    </div>
+    </form>
 
     <script>
+        const chatForm = document.getElementById('chat-form');
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
 
-        async function sendMessage() {
+        function appendMessage(text, className) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerText = text;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Lock browser from standard refresh
+            
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Clear input box immediately so user knows it registered
             userInput.value = '';
             appendMessage(text, 'user-msg');
 
@@ -171,31 +180,14 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Server returned status ${response.status}`);
+                    appendMessage(`Network Error: Server returned code ${response.status}`, 'ai-msg');
+                    return;
                 }
                 
                 const data = await response.json();
                 appendMessage(data.answer, 'ai-msg');
             } catch (error) {
-                console.error(error);
-                appendMessage("Uplink Error: Connection to Engine timed out or failed.", 'ai-msg');
-            }
-        }
-
-        function appendMessage(text, className) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${className}`;
-            msgDiv.innerText = text;
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // Clean event listeners to prevent browser blocking
-        sendBtn.addEventListener('click', sendMessage);
-        userInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault(); // Stop page from reloading
-                sendMessage();
+                appendMessage("Uplink Interrupted: Cannot connect to Render framework.", 'ai-msg');
             }
         });
     </script>
